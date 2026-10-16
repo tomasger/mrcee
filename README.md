@@ -1,4 +1,3 @@
 # mrcee
 
-(non) Malevolent Remote Execution Engine.
-
+(non) Malevolent Remote Code Execution Engine.
