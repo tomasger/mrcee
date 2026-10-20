@@ -7,8 +7,8 @@ import "google/protobuf/timestamp.proto";
 
 service JobService {
   rpc StartJob(StartJobRequest) returns (StartJobResponse);
-  rpc StopJob(StopJobRequest) returns (StopJobResponse);
-  rpc GetJobStatus(GetJobStatusRequest) returns (GetJobStatusResponse);
+  rpc StopJob(StopJobRequest) returns (JobStatus);
+  rpc GetJobStatus(GetJobStatusRequest) returns (JobStatus);
   rpc StreamOutput(StreamOutputRequest) returns (stream OutputChunk);
 }
 
@@ -23,10 +23,6 @@ message StartJobResponse {
 
 message StopJobRequest {
   string job_id = 1;
-}
-
-message StopJobResponse {
-      JobStatus job = 1;
 }
 
 message GetJobStatusRequest {
@@ -47,11 +43,6 @@ enum JobState {
   JOB_STATE_EXITED = 2;
   JOB_STATE_STOPPED = 3;
   JOB_STATE_STOPPING = 4;
-}
-
-message GetJobStatusResponse {
-  JobState state = 1;
-  optional int32 exit_code = 2;
 }
 
 message StreamOutputRequest {
