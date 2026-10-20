@@ -82,7 +82,9 @@ A simple role-based authorization scheme will be used, with client identities ma
 
 **Operator**: Viewer permissions + start and stop jobs.
 
+User identities will be extraced from the users' verified mTLS certificates. A static server-side configuration (YAML file) will map these identities to either `viewer` or `operator` roles. This mapping will be loaded at server startup and enforced in the gRPC layer.
 
+As a basic precaution against users modifying the role bindings and giving other users privilege escalation by executing commands, the static configuration could be owned by `root`, with permissions `0640`, allowing server's underlying Linux user to only read the file. In a production environment it'd be important to ensure a stronger OS-level separation to provide complete isolation between executed processes and API server.
 
 Jobs will use UUIDv4 identifiers to discourage enumeration. However, knowledge of a job ID does not bypass authorization.
 
