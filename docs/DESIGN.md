@@ -126,7 +126,36 @@ Process `stdout` and `stderr` streams will be merged into a single, binary-safe 
 
 Output will be stored in an append-only, in-memory buffer from the beginning of process execution. Each subscriber will maintain an independent read offset, allowing historical replay and concurrent streaming.
 
-New output will notify subscribers through Go synchronization primitives, avoiding polling. gRPC subscribers will read from the aforementioned output.
+New output will be stored in an append-only `[]byte` buffer, with `sync.Mutex` synchronizing reads and writes. Library will expose the output stream as `io.ReadCloser`, so the users will be iteratively calling `Read()`, which will return up to the caller's buffer capacity from the available output, blocking only when no unread data is available and the job is still running.
+
+In the library, a broadcast channel pattern will be used. When a reader reaches the end of available output, it will block on `select` statement as in the code snippet below. 
+
+```go
+select {
+case <-changed: // output changed, recheck buffer and completion state
+case <-ctx.Done():
+    return 0, ctx.Err()
+case <-reader.closed:
+    return 0, io.ErrClosedPipe
+}
+```
+
+Whenever new output is appended, the library will close the broadcast channel to wake all waiting readers, then replace it with a new channel for subsequent notifications. Example: 
+```go
+func (b *Buffer) Append(data []byte) {
+    b.mu.Lock()
+    defer b.mu.Unlock()
+
+    b.data = append(b.data, data...)
+
+    close(b.changed) // notify all listeners
+    b.changed = make(chan struct{}) // new notification channel
+}
+```
+
+Both the output availability check and acquisition of the notification channel will occur under the same mutex, which will prevent missed notifications.
+
+Readers will also unblock on context cancellation, reader closure, or job completion. Once all output has been consumed and the job's output is finalized, `Read()` will return `EOF`. 
 
 Job's output will be streamed back upon request. If the job is still ongoing CLI will block until it receives EOF from the stream. A user can interrupt the stream (CTRL+C) without affecting the underlying job.
 
