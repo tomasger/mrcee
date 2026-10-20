@@ -9,7 +9,6 @@ service JobService {
   rpc StartJob(StartJobRequest) returns (StartJobResponse);
   rpc StopJob(StopJobRequest) returns (StopJobResponse);
   rpc GetJobStatus(GetJobStatusRequest) returns (GetJobStatusResponse);
-  rpc ListJobs(ListJobsRequest) returns (ListJobsResponse);
   rpc StreamOutput(StreamOutputRequest) returns (stream OutputChunk);
 }
 
@@ -55,11 +54,6 @@ message GetJobStatusResponse {
   optional int32 exit_code = 2;
 }
 
-message ListJobsRequest {}
-
-message ListJobsResponse {
-  repeated JobStatus jobs = 1;
-}
 message StreamOutputRequest {
   string job_id = 1;
 }

@@ -54,10 +54,9 @@ The following items are out of scope:
 
 ## Proposed API
 
-The service will have 5 gRPC methods for:
+The service will have 4 gRPC methods for:
 * Starting the job
 * Query job status
-* Listing all jobs
 * Cancelling the job
 * Getting job's output.
 
