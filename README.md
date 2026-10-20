@@ -20,11 +20,8 @@ mrcee status acde070d-8c4c-4f0d-9d8a-162843c10333
 # cancel job
 mrcee stop acde070d-8c4c-4f0d-9d8a-162843c10333
 
-# get job's output; if job still running, gets output up to this point in time
+# get job's output; if job still running, new output arrives as a stream
 mrcee get acde070d-8c4c-4f0d-9d8a-162843c10333
-
-# stream job's output
-mrcee get -f acde070d-8c4c-4f0d-9d8a-162843c10333
 ```
 
 ## Design

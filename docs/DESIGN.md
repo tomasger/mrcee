@@ -128,7 +128,7 @@ Output will be stored in an append-only, in-memory buffer from the beginning of 
 
 New output will notify subscribers through Go synchronization primitives, avoiding polling. gRPC subscribers will read from the aforementioned output.
 
-Job's output requests will be categorized in two categories, _non-following_ and _following_. Former will return the currently available output, while latter will continue streaming until the job completes and all captured output has been delivered.
+Job's output will be streamed back upon request. If the job is still ongoing CLI will block until it receives EOF from the stream. A user can interrupt the stream (CTRL+C) without affecting the underlying job.
 
 #### Output Streaming (following) - flow chart
 
