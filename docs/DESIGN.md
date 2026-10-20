@@ -100,6 +100,39 @@ Optional flags `--server` `--cert` and `--key` will exist with sensible defaults
 
 For usage examples - see [Usage Examples](../README.md#usage-examples) in README.
 
+### Supported Commands
+
+The worker will support non-interactive Linux executables available on the server's system.
+
+Some examples:
+```bash
+# Simple command
+mrcee start -- echo "Hello World"
+
+# Command with arguments
+mrcee start -- find /tmp -type f
+
+# Long-running command
+mrcee start -- sleep 120
+
+# Continuous output
+mrcee start -f -- tail -f error.log
+
+# Binary output
+mrcee start -f -- head -c 1024 /dev/urandom
+
+# Invoked shell script with redirections
+mrcee start -- sh -c 'echo "Something failed" >&2; exit 42'
+
+# Invoked shells cript with pipes
+mrcee start -- sh -c 'echo "hello" | wc -c'
+```
+
+### Unsupported commands
+
+* Interactive applications requiring stdin or a terminal (PTY), such as `vim`, `top`, `k9s`.
+* Implicit shell interpretation: Shell features such as pipes, redirects, variable expansion and globbing require explicitly invoking a shell (sh -c '...'), a command like `mrcee start -- echo "hello" '|' wc -c` would not have the pipeline constructed. 
+
 ## Implementation details
 
 ### Go & Tooling
