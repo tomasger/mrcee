@@ -42,7 +42,6 @@ enum JobState {
   JOB_STATE_RUNNING = 1;
   JOB_STATE_EXITED = 2;
   JOB_STATE_STOPPED = 3;
-  JOB_STATE_STOPPING = 4;
 }
 
 message StreamOutputRequest {

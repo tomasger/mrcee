@@ -82,6 +82,8 @@ A simple role-based authorization scheme will be used, with client identities ma
 
 **Operator**: Viewer permissions + start and stop jobs.
 
+
+
 Jobs will use UUIDv4 identifiers to discourage enumeration. However, knowledge of a job ID does not bypass authorization.
 
 ### Process Isolation
@@ -151,7 +153,9 @@ Jobs will be managed using standard library's `os/exec`, executing programs dire
 
 Job metadata will be stored and managed in an in-memory, concurrency-safe job registry.
 
-Stopping a job will terminate its main process and wait for it to exit. Comprehensive child-process termination is out of scope.
+Stopping a job will synchronously terminate its main process by sending a `SIGTERM` with a grace period of 10 seconds. Afterwards, if the job did not stop, a `SIGKILL` will be sent. A response from `StopJob` returns `JobStatus`, which is guaranteed to include an `exit_code` or a `termination_signal`, depending on whether the process was terminated by a signal or handled the signal and exited. It would also have a `finished_at` timestamp which would allow to determine the execution duration. 
+
+Comprehensive child-process termination is out of scope. If the parent process spawned some child processes, there is no guarantee those will have stopped when parent process has.
 
 ### Output Streaming
 
