@@ -20,7 +20,6 @@ flowchart TB
 
     subgraph Worker["Linux Worker Host"]
         API["gRPC Server"]
-        Auth["Authorization Config"]
 
         subgraph Library["Job Lifecycle Library"]
             Manager["Job Registry"]
@@ -33,7 +32,6 @@ flowchart TB
         Manager -->|"os/exec"| Process
         Process -->|"stdout + stderr"| Output
         Manager --- Output
-        Auth -.-> API
     end
 
     CLI <-->|"gRPC / mTLS"| API
@@ -77,15 +75,13 @@ In production, certificate issuance, renewal and revocation would be delegated t
 
 ### Authorization
 
-A simple role-based authorization scheme will be used, with client identities mapped to roles in server-side configuration.
+A simple role-based authorization scheme will be used, with client identities and roles embedded in their mTLS certificates. The roles are as following:
 
 **Viewer**: Can query job status and fetch/stream output.
 
 **Operator**: Viewer permissions + start and stop jobs.
 
-User identities will be extraced from the users' verified mTLS certificates. A static server-side configuration (YAML file) will map these identities to either `viewer` or `operator` roles. This mapping will be loaded at server startup and enforced in the gRPC layer.
-
-As a basic precaution against users modifying the role bindings and giving other users privilege escalation by executing commands, the static configuration could be owned by `root`, with permissions `0640`, allowing server's underlying Linux user to only read the file. In a production environment it'd be important to ensure a stronger OS-level separation to provide complete isolation between executed processes and API server.
+User identities and roles will be extraced from the users' verified mTLS certificates. The extracted role will then be used to determine user's permission scope and whether a requested command can be executed.
 
 Jobs will use UUIDv4 identifiers to discourage enumeration. However, knowledge of a job ID does not bypass authorization.
 
