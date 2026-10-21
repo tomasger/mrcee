@@ -51,6 +51,7 @@ The following items are out of scope:
 * Persistence of jobs and their output across server restarts.
 * Automated certificate issuance and renewal.
 * High Availability // distributed execution across multiple worker hosts.
+* Graceful termination of canceled commands.
 
 ## Proposed API
 
@@ -155,7 +156,7 @@ Jobs will be managed using standard library's `os/exec`, executing programs dire
 
 Job metadata will be stored and managed in an in-memory, concurrency-safe job registry.
 
-Stopping a job will synchronously terminate its main process by sending a `SIGTERM` with a grace period of 10 seconds. Afterwards, if the job did not stop, a `SIGKILL` will be sent. A response from `StopJob` returns `JobStatus`, which is guaranteed to include an `exit_code` or a `termination_signal`, depending on whether the process was terminated by a signal or handled the signal and exited. It would also have a `finished_at` timestamp which would allow to determine the execution duration. 
+Stopping a job will synchronously terminate its main process by sending a `SIGKILL`. Termination with `SIGTERM` and a grace period is out of scope for first version. A response from `StopJob` returns `JobStatus`, which is guaranteed to include an `exit_code` or a `termination_signal`. In this first version, any stopped job will contain only a `termination_signal: SIGKILL (9)` value. It would also have a `finished_at` timestamp which would allow to determine the execution duration. 
 
 Comprehensive child-process termination is out of scope. If the parent process spawned some child processes, there is no guarantee those will have stopped when parent process has.
 
