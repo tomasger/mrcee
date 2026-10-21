@@ -31,10 +31,11 @@ message GetJobStatusRequest {
 
 message JobStatus {
   string job_id = 1;
-  JobState state = 2;
-  google.protobuf.Timestamp started_at = 3;
-  google.protobuf.Timestamp finished_at = 4;
-  optional int32 exit_code = 5;
+  string created_by = 2;
+  JobState state = 3;
+  google.protobuf.Timestamp started_at = 4;
+  google.protobuf.Timestamp finished_at = 5;
+  optional int32 exit_code = 6;
 }
 
 enum JobState {

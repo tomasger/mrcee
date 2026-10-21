@@ -96,7 +96,7 @@ Stronger isolation through separate OS identities, namespaces or containers woul
 
 ## CLI UX
 
-The CLI has commands, and full and shorthand flags (e.g. `--follow` and `-f`). The aim is for commands to be short, clear, and intuitive for users of GNU/Linux tools.
+The CLI has commands, and full and shorthand flags (e.g. `--help` and `-h`). The aim is for commands to be short, clear, and intuitive for users of GNU/Linux tools.
 
 Interrupting a command (CTRL+C) will not stop the underlying command.
 
@@ -120,22 +120,22 @@ mrcee start -- find /tmp -type f
 mrcee start -- sleep 120
 
 # Continuous output
-mrcee start -f -- tail -f error.log
+mrcee start -- tail -f error.log
 
 # Binary output
-mrcee start -f -- head -c 1024 /dev/urandom
+mrcee start -- head -c 1024 /dev/urandom
 
 # Invoked shell script with redirections
 mrcee start -- sh -c 'echo "Something failed" >&2; exit 42'
 
-# Invoked shells cript with pipes
+# Invoked shell script with pipes
 mrcee start -- sh -c 'echo "hello" | wc -c'
 ```
 
 ### Unsupported commands
 
 * Interactive applications requiring stdin or a terminal (PTY), such as `vim`, `top`, `k9s`.
-* Implicit shell interpretation: Shell features such as pipes, redirects, variable expansion and globbing require explicitly invoking a shell (sh -c '...'), a command like `mrcee start -- echo "hello" '|' wc -c` would not have the pipeline constructed. 
+* Implicit shell interpretation: Shell features such as pipes, redirects, variable expansion and globbing require explicitly invoking a shell via `sh -c '...'`. Running a command like `mrcee start -- echo "hello" '|' wc -c` would simply tract the pipe syntax as another argument (`args: []string{"hello", "|", "wc", "-c"}`) and return `hello | wc -c`.
 
 ## Implementation details
 
@@ -198,7 +198,7 @@ Readers will also unblock on context cancellation, reader closure, or job comple
 
 Job's output will be streamed back upon request. If the job is still ongoing CLI will block until it receives EOF from the stream. A user can interrupt the stream (CTRL+C) without affecting the underlying job.
 
-#### Output Streaming (following) - flow chart
+#### Output Streaming - flow chart
 
 ```mermaid
 
