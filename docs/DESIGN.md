@@ -85,6 +85,10 @@ User identities and roles will be extraced from the users' verified mTLS certifi
 
 Jobs will use UUIDv4 identifiers to discourage enumeration. However, knowledge of a job ID does not bypass authorization.
 
+#### Role and Identity embedding mechanism
+
+Go's [crypto/x590 Certificate](https://pkg.go.dev/crypto/x509#Certificate) type contains some fields for storing Subject Alternate Names (SANs). Specifically, `URIs` field which allows to store arbitrary data in a format of Uniform Resource Name (URN). This field will be utilized to store the identity (e.g. `urn:mrcee:user:bob`) and role (e.g. `urn:mrcee:role:viewer`) in the client's certificate, which the server's authorization mechanism will act upon.
+
 ### Process Isolation
 
 Jobs will execute under the worker service's Linux user. While API authorization protects access to service operations, it does not provide isolation between executing processes or protect the host from malicious authorized operators.
