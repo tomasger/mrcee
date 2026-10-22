@@ -31,7 +31,6 @@ message GetJobStatusRequest {
 
 message JobStatus {
   string job_id = 1;
-  string created_by = 2;
   JobState state = 3;
   google.protobuf.Timestamp started_at = 4;
   google.protobuf.Timestamp finished_at = 5;

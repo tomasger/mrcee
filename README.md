@@ -18,7 +18,6 @@ Job started: acde070d-8c4c-4f0d-9d8a-162843c10333
 # Job that finished
 $ mrcee status acde070d-8c4c-4f0d-9d8a-162843c10333
 Job ID:      acde070d-8c4c-4f0d-9d8a-162843c10333
-Created by:  Bob
 State:       EXITED
 Started:     2026-10-21 13:00:00
 Finished:    2026-10-21 13:00:00
@@ -27,7 +26,6 @@ Exit code:   0
 # Job that's still running
 $ mrcee status acde070d-8c4c-4f0d-9d8a-162843c10334
 Job ID:      acde070d-8c4c-4f0d-9d8a-162843c10334
-Created By:  Alice
 State:       RUNNING
 Started:     2026-10-21 13:00:00
 Duration:    16s
@@ -48,7 +46,6 @@ Job started: 535c904e-e8b6-4b37-babc-bfe5008cf481
 
 $ mrcee status 535c904e-e8b6-4b37-babc-bfe5008cf481
 Job ID:      535c904e-e8b6-4b37-babc-bfe5008cf481
-Created by:  Bob
 State:       EXITED
 Started:     2026-10-21 13:10:00
 Finished:    2026-10-21 13:10:00
@@ -65,7 +62,6 @@ Job started: acde070d-8c4c-4f0d-9d8a-162843c10333
 
 $ mrcee stop acde070d-8c4c-4f0d-9d8a-162843c10333
 Job ID:      acde070d-8c4c-4f0d-9d8a-162843c10333
-Created by:  Bob
 State:       STOPPED
 Started:     2026-10-21 13:05:00
 Finished:    2026-10-21 13:05:08
