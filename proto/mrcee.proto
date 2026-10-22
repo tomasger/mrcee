@@ -1,0 +1,53 @@
+
+syntax = "proto3";
+
+package mrcee.v1;
+
+import "google/protobuf/timestamp.proto";
+
+service JobService {
+  rpc StartJob(StartJobRequest) returns (StartJobResponse);
+  rpc StopJob(StopJobRequest) returns (JobStatus);
+  rpc GetJobStatus(GetJobStatusRequest) returns (JobStatus);
+  rpc StreamOutput(StreamOutputRequest) returns (stream OutputChunk);
+}
+
+message StartJobRequest {
+  string executable = 1;
+  repeated string args = 2;
+}
+
+message StartJobResponse {
+  string job_id = 1;
+}
+
+message StopJobRequest {
+  string job_id = 1;
+}
+
+message GetJobStatusRequest {
+  string job_id = 1;
+}
+
+message JobStatus {
+  string job_id = 1;
+  JobState state = 3;
+  google.protobuf.Timestamp started_at = 4;
+  google.protobuf.Timestamp finished_at = 5;
+  optional int32 exit_code = 6;
+}
+
+enum JobState {
+  JOB_STATE_UNSPECIFIED = 0;
+  JOB_STATE_RUNNING = 1;
+  JOB_STATE_EXITED = 2;
+  JOB_STATE_STOPPED = 3;
+}
+
+message StreamOutputRequest {
+  string job_id = 1;
+}
+
+message OutputChunk {
+  bytes data = 1;
+}
