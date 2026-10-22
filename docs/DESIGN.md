@@ -173,8 +173,6 @@ In the library, a broadcast channel pattern will be used. When a reader reaches 
 ```go
 select {
 case <-changed: // output changed, recheck buffer and completion state
-case <-ctx.Done():
-    return 0, ctx.Err()
 case <-reader.closed:
     return 0, io.ErrClosedPipe
 }
@@ -195,7 +193,7 @@ func (b *Buffer) Append(data []byte) {
 
 Both the output availability check and acquisition of the notification channel will occur under the same mutex, which will prevent missed notifications.
 
-Readers will also unblock on context cancellation, reader closure, or job completion. Once all output has been consumed and the job's output is finalized, `Read()` will return `EOF`. 
+Readers will also unblock on reader closure, or job completion. Once all output has been consumed and the job's output is finalized, `Read()` will return `EOF`. 
 
 Job's output will be streamed back upon request. If the job is still ongoing CLI will block until it receives EOF from the stream. A user can interrupt the stream (CTRL+C) without affecting the underlying job.
 
