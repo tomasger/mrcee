@@ -35,6 +35,7 @@ message JobStatus {
   google.protobuf.Timestamp started_at = 4;
   google.protobuf.Timestamp finished_at = 5;
   optional int32 exit_code = 6;
+  optional int32 termination_signal = 7;
 }
 
 enum JobState {
