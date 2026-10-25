@@ -5,6 +5,8 @@ package mrcee.v1;
 
 import "google/protobuf/timestamp.proto";
 
+option go_package = "github.com/tomasger/mrcee/gen/mrcee/v1";
+
 service JobService {
   rpc StartJob(StartJobRequest) returns (StartJobResponse);
   rpc StopJob(StopJobRequest) returns (JobStatus);
