@@ -15,12 +15,14 @@ const (
 	StateStopped State = "stopped"
 )
 
+// job wraps a process and manages its lifecycle.
 type job struct {
 	m    sync.Mutex
 	cmd  *exec.Cmd
 	done chan struct{}
 }
 
+// finishedJobState records when and how a process finished.
 type finishedJobState struct {
 	state             State
 	finishedAt        time.Time
