@@ -2,6 +2,7 @@ package job
 
 import (
 	"os/exec"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -16,8 +17,15 @@ const (
 
 // job wraps a process and manages its lifecycle.
 type job struct {
-	cmd  *exec.Cmd
-	done chan struct{}
+	cmd      *exec.Cmd
+	done     chan struct{}
+	doneOnce sync.Once
+}
+
+// markDone unblocks StopJob after final status and output have been published.
+// Safe to call more than once.
+func (j *job) markDone() {
+	j.doneOnce.Do(func() { close(j.done) })
 }
 
 // finishedJobState records when and how a process finished.
@@ -57,7 +65,8 @@ func (j *job) wait() finishedJobState {
 	// - an ExitError from non-zero exit code or
 	//   a signal. We expose that via cmd.ProcessState instead.
 	// - errors from io.Writer. This  does not occur in our
-	//   implementation because output.Write() always succeeds.
+	//   implementation because output.Write() always succeeds until
+	//   output.finish() which monitorJob calls only after cmd.Exec.Wait() returns.
 	// as such it won't cause being left unhandled, but any other output implementation
 	// e.g. storing output in files, would require this to be handled.
 	j.cmd.Wait()

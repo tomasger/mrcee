@@ -89,7 +89,7 @@ func (r *Registry) monitorJob(entry *jobEntry) {
 	entry.output.finish()
 
 	// allow Registry.StopJob to finish
-	close(entry.runtime.done)
+	entry.runtime.markDone()
 }
 
 func (r *Registry) JobStatus(id string) (Status, error) {

@@ -28,13 +28,17 @@ type outputReader struct {
 
 // Write is an implementation of io.Writer.
 // Invoked by exec.Cmd when a process produces new output.
+// Writes after finish return io.ErrClosedPipe without modifying the buffer.
 func (o *output) Write(b []byte) (int, error) {
+	o.m.Lock()
+	defer o.m.Unlock()
+
+	if o.finished {
+		return 0, io.ErrClosedPipe
+	}
 	if len(b) == 0 {
 		return 0, nil
 	}
-
-	o.m.Lock()
-	defer o.m.Unlock()
 
 	o.data = append(o.data, b...)
 

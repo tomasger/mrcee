@@ -77,6 +77,21 @@ func TestOutputIndependentOffsets(t *testing.T) {
 	require.ErrorIs(t, err, io.EOF)
 }
 
+func TestOutputWriteAfterFinish(t *testing.T) {
+	o, r := newTestOutput(t)
+	want := []byte("before finish")
+	_, err := o.Write(want)
+	require.NoError(t, err)
+	o.finish()
+
+	n, err := o.Write([]byte("after finish"))
+	require.Equal(t, 0, n)
+	require.ErrorIs(t, err, io.ErrClosedPipe)
+
+	reader := openTestStream(t, r)
+	require.Equal(t, want, readAll(t, reader))
+}
+
 // TestOutputReadWaitsForNotification tests that calling `Read()`
 // is a blocking operation, and that it unblocks when:
 // * write is called
