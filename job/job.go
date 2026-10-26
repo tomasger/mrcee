@@ -66,7 +66,7 @@ func (j *job) wait() finishedJobState {
 	//   a signal. We expose that via cmd.ProcessState instead.
 	// - errors from io.Writer. This  does not occur in our
 	//   implementation because output.Write() always succeeds until
-	//   output.finish() which monitorJob calls only after cmd.Exec.Wait() returns.
+	//   output.finish() which monitorJob calls only after exec.Cmd.Wait() returns.
 	// as such it won't cause being left unhandled, but any other output implementation
 	// e.g. storing output in files, would require this to be handled.
 	j.cmd.Wait()
