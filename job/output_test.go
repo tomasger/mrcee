@@ -141,21 +141,28 @@ func TestOutputReadWaitsForNotification(t *testing.T) {
 	}
 }
 
-// TestOutputReaderClose ensures idempotency of outputReader
-// Close() method, and that it does not affect the output data
-// nor other output readers.
-func TestOutputReaderClose(t *testing.T) {
-	o, r := newTestOutput(t)
-	first := openTestStream(t, r)
-	second := openTestStream(t, r)
+func TestOutputReaderCloseIdempotent(t *testing.T) {
+	_, r := newTestOutput(t)
+	reader := openTestStream(t, r)
 	var wg sync.WaitGroup
 	// call Close() multiple times simultaneously
 	for range 4 {
 		wg.Go(func() {
-			assert.NoError(t, first.Close())
+			assert.NoError(t, reader.Close())
 		})
 	}
 	wg.Wait()
+
+	n, err := reader.Read(make([]byte, 1))
+	require.Equal(t, 0, n)
+	require.ErrorIs(t, err, io.ErrClosedPipe)
+}
+
+func TestOutputReaderCloseIsolation(t *testing.T) {
+	o, r := newTestOutput(t)
+	first := openTestStream(t, r)
+	second := openTestStream(t, r)
+	require.NoError(t, first.Close())
 
 	_, err := o.Write([]byte("still running"))
 	require.NoError(t, err)
