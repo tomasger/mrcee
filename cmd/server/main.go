@@ -8,11 +8,8 @@ import (
 	"github.com/tomasger/mrcee/job"
 )
 
-var (
-	address = flag.String("address", "127.0.0.1:10234", "ip:port to bind the server to")
-)
-
 func main() {
+	address := flag.String("address", "127.0.0.1:10234", "ip:port to bind the server to")
 	flag.Parse()
 
 	registry := job.NewRegistry()
