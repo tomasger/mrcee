@@ -15,7 +15,7 @@ func newTestOutput(t *testing.T) (*output, *Registry) {
 	t.Helper()
 	o := &output{changed: make(chan struct{})}
 	r := NewRegistry()
-	r.outputStore["job"] = o
+	r.jobs["job"] = &jobEntry{output: o}
 	return o, r
 }
 

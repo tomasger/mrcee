@@ -30,9 +30,7 @@ func TestRegistryErrors(t *testing.T) {
 	id, err = r.StartJob(filepath.Join(t.TempDir(), "missing"), nil)
 	require.Error(t, err)
 	require.Empty(t, id)
-	require.Empty(t, r.jobStore, "failed StartJob registered a job entry")
-	require.Empty(t, r.statusStore)
-	require.Empty(t, r.outputStore)
+	require.Empty(t, r.jobs, "failed StartJob registered a job entry")
 }
 
 // TestRegistryJobCompletion tests for successful job

@@ -2,7 +2,6 @@ package job
 
 import (
 	"os/exec"
-	"sync"
 	"syscall"
 	"time"
 )
@@ -17,7 +16,6 @@ const (
 
 // job wraps a process and manages its lifecycle.
 type job struct {
-	m    sync.Mutex
 	cmd  *exec.Cmd
 	done chan struct{}
 }
@@ -64,8 +62,6 @@ func (j *job) wait() finishedJobState {
 	// e.g. storing output in files, would require this to be handled.
 	j.cmd.Wait()
 	finishedAt := time.Now()
-	j.m.Lock()
-	defer j.m.Unlock()
 	finishedState := finishedJobState{
 		finishedAt: finishedAt,
 	}

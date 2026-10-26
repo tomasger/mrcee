@@ -17,19 +17,19 @@ var (
 )
 
 type Registry struct {
-	m        sync.RWMutex
-	jobStore map[string]*job
-	// TODO: wrap statusStore in a struct, expose as interface
-	statusStore map[string]Status
-	// TODO: wrap outputStore in a struct, expose as interface
-	outputStore map[string]*output
+	m    sync.RWMutex
+	jobs map[string]*jobEntry
+}
+
+type jobEntry struct {
+	runtime *job
+	status  Status
+	output  *output
 }
 
 func NewRegistry() *Registry {
 	return &Registry{
-		jobStore:    make(map[string]*job),
-		statusStore: make(map[string]Status),
-		outputStore: make(map[string]*output),
+		jobs: make(map[string]*jobEntry),
 	}
 }
 
@@ -60,66 +60,67 @@ func (r *Registry) StartJob(command string, args []string) (string, error) {
 		return "", err
 	}
 
-	r.m.Lock()
+	entry := &jobEntry{
+		status:  status,
+		runtime: job,
+		output:  o,
+	}
 
-	r.statusStore[id] = status
-	r.outputStore[id] = o
-	r.jobStore[id] = job
+	r.m.Lock()
+	r.jobs[id] = entry
 	r.m.Unlock()
 
-	go r.monitorJob(id, job, o)
+	go r.monitorJob(entry)
 	return id, nil
 }
 
-func (r *Registry) monitorJob(id string, j *job, o *output) {
-	finishedJobState := j.wait()
+func (r *Registry) monitorJob(entry *jobEntry) {
+	finishedJobState := entry.runtime.wait()
 
 	// update state
 	r.m.Lock()
-	status := r.statusStore[id]
-	status.State = finishedJobState.state
-	status.FinishedAt = &finishedJobState.finishedAt
-	status.ExitCode = finishedJobState.exitCode
-	status.TerminationSignal = finishedJobState.terminationSignal
-	r.statusStore[id] = status
+	entry.status.State = finishedJobState.state
+	entry.status.FinishedAt = &finishedJobState.finishedAt
+	entry.status.ExitCode = finishedJobState.exitCode
+	entry.status.TerminationSignal = finishedJobState.terminationSignal
 	r.m.Unlock()
 
 	// Publish final status before readers receive EOF.
-	o.finish()
+	entry.output.finish()
 
 	// allow Registry.StopJob to finish
-	close(j.done)
+	close(entry.runtime.done)
 }
 
 func (r *Registry) JobStatus(id string) (Status, error) {
 	r.m.RLock()
 	defer r.m.RUnlock()
-	status, ok := r.statusStore[id]
+	entry, ok := r.jobs[id]
 	if !ok {
 		return Status{}, ErrJobNotFound
 	}
 
-	return status, nil
+	return entry.status, nil
 }
 
 // StopJob issues a SIGKILL to a job. (TODO: implement graceful exit)
 // If a job is already finished, ErrJobAlreadyStopped is returned.
 func (r *Registry) StopJob(id string) (Status, error) {
 	r.m.RLock()
-	status, statusOk := r.statusStore[id]
-	job, jobOk := r.jobStore[id]
-	r.m.RUnlock()
-
-	if !statusOk || !jobOk {
+	entry, ok := r.jobs[id]
+	if !ok {
+		r.m.RUnlock()
 		return Status{}, ErrJobNotFound
 	}
 
 	// check if job is finished before issuing the signal
-	if status.State != StateRunning {
+	if entry.status.State != StateRunning {
+		r.m.RUnlock()
 		return Status{}, ErrJobAlreadyStopped
 	}
+	r.m.RUnlock()
 
-	err := job.stop()
+	err := entry.runtime.stop()
 	// job may have finished in the time it took to send the signal
 	if errors.Is(err, os.ErrProcessDone) {
 		return Status{}, ErrJobAlreadyStopped
@@ -129,14 +130,10 @@ func (r *Registry) StopJob(id string) (Status, error) {
 	}
 
 	// wait for Registry.monitorJob to finish
-	<-job.done
+	<-entry.runtime.done
 
 	// re-fetch status
-	r.m.RLock()
-	status = r.statusStore[id]
-	r.m.RUnlock()
-
-	return status, nil
+	return r.JobStatus(id)
 }
 
 // OpenStream replays a job's output from the beginning, then waits for new
@@ -145,14 +142,13 @@ func (r *Registry) OpenStream(id string) (io.ReadCloser, error) {
 	r.m.RLock()
 	defer r.m.RUnlock()
 
-	output, ok := r.outputStore[id]
+	entry, ok := r.jobs[id]
 	if !ok {
 		return nil, ErrJobNotFound
-
 	}
 
 	return &outputReader{
-		output:       output,
+		output:       entry.output,
 		readerClosed: make(chan struct{}),
 	}, nil
 }
