@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"io"
 	"os"
 	"os/exec"
 
@@ -22,6 +23,8 @@ func jobError(err error) error {
 		return status.Error(codes.NotFound, err.Error())
 	case errors.Is(err, job.ErrJobAlreadyStopped):
 		return status.Error(codes.FailedPrecondition, err.Error())
+	case errors.Is(err, io.ErrClosedPipe):
+		return status.Error(codes.Canceled, err.Error())
 	default:
 		return status.Error(codes.Internal, err.Error())
 	}

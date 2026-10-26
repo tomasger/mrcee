@@ -70,9 +70,7 @@ func (s *GRPCServer) GetJobStatus(ctx context.Context, req *v1.GetJobStatusReque
 
 func (s *GRPCServer) StreamOutput(req *v1.StreamOutputRequest, stream v1.JobService_StreamOutputServer) error {
 	ctx := stream.Context()
-	if err := ctx.Err(); err != nil {
-		return status.FromContextError(err).Err()
-	}
+
 	if req.GetJobId() == "" {
 		return status.Error(codes.InvalidArgument, "job_id is required")
 	}
@@ -89,17 +87,11 @@ func (s *GRPCServer) StreamOutput(req *v1.StreamOutputRequest, stream v1.JobServ
 
 	buf := make([]byte, BufferSize)
 	for {
-		if err := ctx.Err(); err != nil {
-			return status.FromContextError(err).Err()
-		}
 		n, err := reader.Read(buf)
 		if n > 0 {
 			if err := stream.Send(&v1.OutputChunk{Data: bytes.Clone(buf[:n])}); err != nil {
 				return err
 			}
-		}
-		if ctx.Err() != nil {
-			return status.FromContextError(ctx.Err()).Err()
 		}
 		if errors.Is(err, io.EOF) {
 			return nil
