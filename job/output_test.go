@@ -5,6 +5,7 @@ import (
 	"io"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -100,43 +101,49 @@ func TestOutputWriteAfterFinish(t *testing.T) {
 func TestOutputReadWaitsForNotification(t *testing.T) {
 	for _, event := range []string{"write", "finish", "close"} {
 		t.Run(event, func(t *testing.T) {
-			o, r := newTestOutput(t)
-			reader := openTestStream(t, r)
-			type result struct {
-				n   int
-				err error
-			}
-			done := make(chan result, 1)
-			go func() {
-				n, err := reader.Read(make([]byte, 1))
-				done <- result{n, err}
-			}()
-			select {
-			case got := <-done:
-				require.FailNow(t, "Read returned before notification", "%+v", got)
-			case <-time.After(20 * time.Millisecond):
-			}
+			synctest.Test(t, func(t *testing.T) {
+				o, r := newTestOutput(t)
+				reader := openTestStream(t, r)
+				type result struct {
+					n   int
+					err error
+				}
+				done := make(chan result, 1)
+				go func() {
+					n, err := reader.Read(make([]byte, 1))
+					done <- result{n, err}
+				}()
+				// Let Read run until it returns or is durably
+				// blocked waiting for a notification.
+				synctest.Wait()
+				select {
+				case got := <-done:
+					require.FailNow(t, "Read returned before notification", "%+v", got)
+				default:
+				}
 
-			var want result
-			switch event {
-			case "write":
-				_, err := o.Write([]byte{'a'})
-				require.NoError(t, err)
-				want.n = 1
-			case "finish":
-				o.finish()
-				want.err = io.EOF
-			case "close":
-				require.NoError(t, reader.Close())
-				want.err = io.ErrClosedPipe
-			}
-			select {
-			case got := <-done:
-				require.Equal(t, want.n, got.n)
-				require.ErrorIs(t, got.err, want.err)
-			case <-time.After(5 * time.Second):
-				require.FailNow(t, "Read did not wake up")
-			}
+				var want result
+				switch event {
+				case "write":
+					_, err := o.Write([]byte{'a'})
+					require.NoError(t, err)
+					want.n = 1
+				case "finish":
+					o.finish()
+					want.err = io.EOF
+				case "close":
+					require.NoError(t, reader.Close())
+					want.err = io.ErrClosedPipe
+				}
+				synctest.Wait()
+				select {
+				case got := <-done:
+					require.Equal(t, want.n, got.n)
+					require.ErrorIs(t, got.err, want.err)
+				default:
+					require.FailNow(t, "Read did not wake up")
+				}
+			})
 		})
 	}
 }
@@ -145,7 +152,6 @@ func TestOutputReaderCloseIdempotent(t *testing.T) {
 	_, r := newTestOutput(t)
 	reader := openTestStream(t, r)
 	var wg sync.WaitGroup
-	// call Close() multiple times simultaneously
 	for range 4 {
 		wg.Go(func() {
 			assert.NoError(t, reader.Close())
@@ -180,54 +186,45 @@ func TestOutputReaderCloseIsolation(t *testing.T) {
 // While it may seem like a user error to pass a zero length slice,
 // io.Reader contract explicitly allows that, so we adhere to it.
 func TestOutputZeroLengthRead(t *testing.T) {
-	_, r := newTestOutput(t)
-	reader := openTestStream(t, r)
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
+	synctest.Test(t, func(t *testing.T) {
+		_, r := newTestOutput(t)
+		reader := openTestStream(t, r)
 		n, err := reader.Read(make([]byte, 0))
-		assert.NoError(t, err)
-		assert.Equal(t, 0, n)
-	}()
-	select {
-	case <-done:
-	case <-time.After(5 * time.Second):
-		require.FailNow(t, "zero-length Read blocked")
-	}
+		require.NoError(t, err)
+		require.Zero(t, n)
+	})
 }
 
 // TestOutputConcurrentSubscribers checks happy case scenario
 // with multiple concurrent subscribers.
 func TestOutputConcurrentSubscribers(t *testing.T) {
-	o, r := newTestOutput(t)
-	dataChunk := []byte("chunk\n")
-	want := bytes.Repeat(dataChunk, 100)
-	type result struct {
-		data []byte
-		err  error
-	}
-	results := make(chan result, 8)
-	for range cap(results) {
-		reader := openTestStream(t, r)
-		go func() {
-			data, err := io.ReadAll(reader)
-			results <- result{data, err}
-		}()
-	}
-	for i := 0; i < len(want); i += len(dataChunk) {
-		_, err := o.Write(want[i : i+len(dataChunk)])
-		require.NoError(t, err)
-	}
-	o.finish()
-	for range cap(results) {
-		select {
-		case got := <-results:
+	synctest.Test(t, func(t *testing.T) {
+		o, r := newTestOutput(t)
+		dataChunk := []byte("chunk\n")
+		want := bytes.Repeat(dataChunk, 100)
+		type result struct {
+			data []byte
+			err  error
+		}
+		results := make(chan result, 8)
+		for range cap(results) {
+			reader := openTestStream(t, r)
+			go func() {
+				data, err := io.ReadAll(reader)
+				results <- result{data, err}
+			}()
+		}
+		for i := 0; i < len(want); i += len(dataChunk) {
+			_, err := o.Write(want[i : i+len(dataChunk)])
+			require.NoError(t, err)
+		}
+		o.finish()
+		for range cap(results) {
+			got := <-results
 			require.NoError(t, got.err)
 			require.Equal(t, want, got.data)
-		case <-time.After(5 * time.Second):
-			require.FailNow(t, "subscriber did not finish")
 		}
-	}
+	})
 }
 
 // readAll reads all available data from a reader
