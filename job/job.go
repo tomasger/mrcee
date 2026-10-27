@@ -1,6 +1,7 @@
 package job
 
 import (
+	"io"
 	"os/exec"
 	"sync"
 	"syscall"
@@ -38,7 +39,7 @@ type finishedJobState struct {
 
 // startJob starts the process with the supplied output buffer.
 // It does not wait for the job to complete.
-func startJob(command string, args []string, o *output) (*job, error) {
+func startJob(command string, args []string, o io.Writer) (*job, error) {
 	// TODO: Accept execution options for working directory and environment
 	// instead of always inheriting the worker process's settings.
 	j := &job{
