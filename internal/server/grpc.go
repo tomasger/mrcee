@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log/slog"
 
 	v1 "github.com/tomasger/mrcee/gen/mrcee/v1"
 	"github.com/tomasger/mrcee/job"
@@ -33,6 +34,7 @@ func (s *GRPCServer) StartJob(ctx context.Context, req *v1.StartJobRequest) (*v1
 
 	id, err := s.registry.StartJob(req.GetExecutable(), req.GetArgs())
 	if err != nil {
+		slog.Error("failed to start job", "executable", req.GetExecutable(), "args", req.GetArgs(), "error", err)
 		return nil, jobError(err)
 	}
 	return &v1.StartJobResponse{JobId: id}, nil
@@ -48,6 +50,7 @@ func (s *GRPCServer) StopJob(ctx context.Context, req *v1.StopJobRequest) (*v1.J
 
 	jobStatus, err := s.registry.StopJob(req.GetJobId())
 	if err != nil {
+		slog.Error("failed to stop job", "id", req.GetJobId(), "error", err)
 		return nil, jobError(err)
 	}
 	return toProtoStatus(jobStatus), nil
@@ -63,6 +66,7 @@ func (s *GRPCServer) GetJobStatus(ctx context.Context, req *v1.GetJobStatusReque
 
 	jobStatus, err := s.registry.JobStatus(req.GetJobId())
 	if err != nil {
+		slog.Error("failed to get job", "id", req.GetJobId(), "error", err)
 		return nil, jobError(err)
 	}
 	return toProtoStatus(jobStatus), nil
@@ -77,6 +81,7 @@ func (s *GRPCServer) StreamOutput(req *v1.StreamOutputRequest, stream v1.JobServ
 
 	reader, err := s.registry.OpenStream(req.GetJobId())
 	if err != nil {
+		slog.Error("failed to open stream", "id", req.GetJobId(), "error", err)
 		return jobError(err)
 	}
 	defer reader.Close()
@@ -97,6 +102,7 @@ func (s *GRPCServer) StreamOutput(req *v1.StreamOutputRequest, stream v1.JobServ
 			return nil
 		}
 		if err != nil {
+			slog.Error("failed to read from output buffer", "id", req.GetJobId(), "error", err)
 			return jobError(err)
 		}
 	}

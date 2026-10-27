@@ -17,15 +17,17 @@ import (
 // more detailed error overview.
 func jobError(err error) error {
 	switch {
-	case errors.Is(err, job.ErrEmptyCommand), errors.Is(err, exec.ErrNotFound), errors.Is(err, os.ErrNotExist):
-		return status.Error(codes.InvalidArgument, err.Error())
+	case errors.Is(err, job.ErrEmptyCommand):
+		return status.Error(codes.InvalidArgument, "executable is required")
+	case errors.Is(err, exec.ErrNotFound), errors.Is(err, os.ErrNotExist):
+		return status.Error(codes.InvalidArgument, "executable not found")
 	case errors.Is(err, job.ErrJobNotFound):
-		return status.Error(codes.NotFound, err.Error())
+		return status.Error(codes.NotFound, "job not found")
 	case errors.Is(err, job.ErrJobAlreadyStopped):
-		return status.Error(codes.FailedPrecondition, err.Error())
+		return status.Error(codes.FailedPrecondition, "job has already finished")
 	case errors.Is(err, io.ErrClosedPipe):
-		return status.Error(codes.Canceled, err.Error())
+		return status.Error(codes.Canceled, "output stream canceled")
 	default:
-		return status.Error(codes.Internal, err.Error())
+		return status.Error(codes.Internal, "internal server error")
 	}
 }
