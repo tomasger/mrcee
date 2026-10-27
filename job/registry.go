@@ -35,7 +35,6 @@ func NewRegistry() *Registry {
 
 // StartJob initializes a job that will execute the command
 // with its given arguments. Returns job ID (UUIDv4).
-
 func (r *Registry) StartJob(command string, args []string) (string, error) {
 	if command == "" {
 		return "", ErrEmptyCommand
