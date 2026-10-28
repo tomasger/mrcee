@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/urfave/cli/v3"
 )
@@ -41,7 +43,12 @@ func main() {
 		},
 	}
 
-	if err := cmd.Run(context.Background(), os.Args); err != nil {
-		log.Fatal(err)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	err := cmd.Run(ctx, os.Args)
+	// Release signal resources before os.Exit, which skips deferred calls.
+	stop()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "mrcee:", err)
+		os.Exit(1)
 	}
 }
