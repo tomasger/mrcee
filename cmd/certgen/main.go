@@ -18,14 +18,12 @@ import (
 	"time"
 )
 
-var (
-	outputPath = flag.String("o", ".local/certs/", "path to certificates")
-	userName   = flag.String("user", "local", "client user identity")
-	role       = flag.String("role", "operator", "client role: viewer or operator")
-)
-
 func main() {
+	outputPath := flag.String("o", ".local/certs/", "path to certificates")
+	userName := flag.String("user", "local", "client user identity")
+	role := flag.String("role", "operator", "client role: viewer or operator")
 	flag.Parse()
+
 	if err := generateCertificates(*outputPath, *userName, *role); err != nil {
 		log.Fatal(err)
 	}

@@ -20,17 +20,19 @@ const (
 )
 
 // roleMethods map roles to the methods they can execute.
-var roleMethods = map[string][]string{
-	"viewer": {
-		v1.JobService_GetJobStatus_FullMethodName,
-		v1.JobService_StreamOutput_FullMethodName,
-	},
-	"operator": {
-		v1.JobService_StartJob_FullMethodName,
-		v1.JobService_StopJob_FullMethodName,
-		v1.JobService_GetJobStatus_FullMethodName,
-		v1.JobService_StreamOutput_FullMethodName,
-	},
+func roleMethods() map[string][]string {
+	return map[string][]string{
+		"viewer": {
+			v1.JobService_GetJobStatus_FullMethodName,
+			v1.JobService_StreamOutput_FullMethodName,
+		},
+		"operator": {
+			v1.JobService_StartJob_FullMethodName,
+			v1.JobService_StopJob_FullMethodName,
+			v1.JobService_GetJobStatus_FullMethodName,
+			v1.JobService_StreamOutput_FullMethodName,
+		},
+	}
 }
 
 // UnaryAuthenticationInterceptor requires a verified client certificate with a
@@ -91,7 +93,7 @@ func authorize(ctx context.Context, method string) error {
 		return err
 	}
 	role, ok := certificateClaim(cert, sanRolePrefix)
-	allowedMethods, isValidRole := roleMethods[role]
+	allowedMethods, isValidRole := roleMethods()[role]
 	if !ok || !isValidRole {
 		return status.Error(codes.PermissionDenied, "client certificate must contain exactly one supported role")
 	}
