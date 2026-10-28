@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"crypto/x509"
+	"slices"
 	"strings"
 
 	v1 "github.com/tomasger/mrcee/gen/mrcee/v1"
@@ -17,6 +18,20 @@ const (
 	sanUsernamePrefix = "urn:mrcee:user:"
 	sanRolePrefix     = "urn:mrcee:role:"
 )
+
+// roleMethods map roles to the methods they can execute.
+var roleMethods = map[string][]string{
+	"viewer": {
+		v1.JobService_GetJobStatus_FullMethodName,
+		v1.JobService_StreamOutput_FullMethodName,
+	},
+	"operator": {
+		v1.JobService_StartJob_FullMethodName,
+		v1.JobService_StopJob_FullMethodName,
+		v1.JobService_GetJobStatus_FullMethodName,
+		v1.JobService_StreamOutput_FullMethodName,
+	},
+}
 
 // UnaryAuthenticationInterceptor requires a verified client certificate with a
 // single, non-empty urn:mrcee:user:<username> URI SAN.
@@ -76,18 +91,14 @@ func authorize(ctx context.Context, method string) error {
 		return err
 	}
 	role, ok := certificateClaim(cert, sanRolePrefix)
-	if !ok || (role != "viewer" && role != "operator") {
-		return status.Error(codes.PermissionDenied, "client certificate must contain one supported role")
+	allowedMethods, isValidRole := roleMethods[role]
+	if !ok || !isValidRole {
+		return status.Error(codes.PermissionDenied, "client certificate must contain exactly one supported role")
 	}
-	switch method {
-	case v1.JobService_GetJobStatus_FullMethodName, v1.JobService_StreamOutput_FullMethodName:
-		return nil
-	case v1.JobService_StartJob_FullMethodName, v1.JobService_StopJob_FullMethodName:
-		if role == "operator" {
-			return nil
-		}
+	if !slices.Contains(allowedMethods, method) {
+		return status.Error(codes.PermissionDenied, "role does not permit this method")
 	}
-	return status.Error(codes.PermissionDenied, "role does not permit this method")
+	return nil
 }
 
 // verifiedClientCertificate returns the client's leaf certificate from the TLS
@@ -104,7 +115,8 @@ func verifiedClientCertificate(ctx context.Context) (*x509.Certificate, error) {
 	return tlsInfo.State.VerifiedChains[0][0], nil
 }
 
-// certificateClaim rejects ambiguous claims instead of choosing a URI by order.
+// certificateClaim requires exactly one non-empty claim with the given prefix.
+// Repeated claims are rejected even when their values match.
 func certificateClaim(cert *x509.Certificate, prefix string) (string, bool) {
 	var value string
 	found := false

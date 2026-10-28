@@ -109,10 +109,15 @@ func TestAuthorizationInterceptors(t *testing.T) {
 		{"operator", []string{"urn:mrcee:role:operator"}, true, true},
 		{"missing_role", nil, false, false},
 		{"empty_role", []string{"urn:mrcee:role:"}, false, false},
+		{"whitespace_role", []string{"urn:mrcee:role:   "}, false, false},
 		{"unknown_role", []string{"urn:mrcee:role:admin"}, false, false},
 		{"role_suffix", []string{"urn:mrcee:role:operator-extra"}, false, false},
 		{"multiple_roles", []string{"urn:mrcee:role:viewer", "urn:mrcee:role:operator"}, false, false},
+		{"duplicate_role", []string{"urn:mrcee:role:operator", "urn:mrcee:role:operator"}, false, false},
+		{"valid_then_empty_role", []string{"urn:mrcee:role:operator", "urn:mrcee:role:"}, false, false},
+		{"empty_then_valid_role", []string{"urn:mrcee:role:", "urn:mrcee:role:operator"}, false, false},
 		{"unknown_then_operator", []string{"urn:mrcee:role:admin", "urn:mrcee:role:operator"}, false, false},
+		{"operator_then_unknown", []string{"urn:mrcee:role:operator", "urn:mrcee:role:admin"}, false, false},
 	}
 
 	for _, role := range roles {
