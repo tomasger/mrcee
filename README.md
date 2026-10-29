@@ -4,6 +4,9 @@
 
 ## Installation
 
+Target OS: 64-bit Linux
+Dependencies: Go 1.27.2 or later
+
 ### Certificates
 
 `mrcee` server and client require a mutual TLS connection to work. `cmd/certgen` is a helper script to generate certificates for development builds. Which are placed in `.local/certs/` by default.
