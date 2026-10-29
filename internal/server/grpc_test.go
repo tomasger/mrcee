@@ -22,14 +22,18 @@ import (
 	"google.golang.org/grpc/test/bufconn"
 )
 
+// newTestClient creates a grpc client without authentication
+// and authorization interceptors. This client is used
+// for testing grpc logic.
 func newTestClient(t *testing.T, opts ...grpc.ServerOption) (v1.JobServiceClient, *job.Registry) {
 	t.Helper()
 	registry := job.NewRegistry()
 	listener := bufconn.Listen(1024 * 1024)
-	server := NewServer("", registry, opts...)
-	go server.grpcServer.Serve(listener)
+	server := grpc.NewServer(opts...)
+	v1.RegisterJobServiceServer(server, NewGRPCServer(registry))
+	go server.Serve(listener)
 	t.Cleanup(func() {
-		server.grpcServer.Stop()
+		server.Stop()
 		listener.Close()
 	})
 

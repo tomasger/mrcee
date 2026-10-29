@@ -15,8 +15,9 @@ type Server struct {
 	grpcServer *grpc.Server
 }
 
+// NewServer registers the job service with the supplied gRPC options.
+// Callers are responsible for configuring transport security and interceptors.
 func NewServer(address string, registry *job.Registry, opts ...grpc.ServerOption) *Server {
-	// TODO: Configure mTLS authentication and authorization.
 	grpcServer := grpc.NewServer(opts...)
 	v1.RegisterJobServiceServer(grpcServer, NewGRPCServer(registry))
 	return &Server{address: address, grpcServer: grpcServer}
