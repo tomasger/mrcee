@@ -21,7 +21,7 @@ import (
 func main() {
 	outputPath := flag.String("o", ".local/certs/", "path to certificates")
 	userName := flag.String("user", "local", "client user identity")
-	role := flag.String("role", "operator", "client role: viewer or operator")
+	role := flag.String("role", "operator", "client role")
 	flag.Parse()
 
 	if err := generateCertificates(*outputPath, *userName, *role); err != nil {
@@ -35,8 +35,8 @@ func generateCertificates(outDir, userName, role string) error {
 		return fmt.Errorf("username cannot be empty")
 	}
 
-	if role != "viewer" && role != "operator" {
-		return fmt.Errorf("role must be viewer or operator")
+	if role == "" {
+		return fmt.Errorf("role cannot be empty")
 	}
 
 	now := time.Now()

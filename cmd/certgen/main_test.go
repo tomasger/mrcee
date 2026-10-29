@@ -177,11 +177,6 @@ func TestGenerateCertificatesRejectsInvalidIdentity(t *testing.T) {
 			user: "bob",
 			role: "",
 		},
-		{
-			name: "unknown_role",
-			user: "alice",
-			role: "admin",
-		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
