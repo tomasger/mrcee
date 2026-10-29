@@ -52,7 +52,7 @@ func TestLoadTLSConfigMutualTLS(t *testing.T) {
 
 	listener := bufconn.Listen(1024 * 1024)
 	// Only exercise the loaded TLS configuration here; application permissions
-	// are covered by internal/server/server_integration_test.go.
+	// are covered by internal/server/server_test.go.
 	grpcServer := grpc.NewServer(grpc.Creds(credentials.NewTLS(serverTLS)))
 	v1.RegisterJobServiceServer(grpcServer, server.NewGRPCServer(job.NewRegistry()))
 	go grpcServer.Serve(listener)
