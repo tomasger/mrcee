@@ -20,20 +20,24 @@ import (
 	"google.golang.org/grpc/test/bufconn"
 )
 
-// TestServerAuthenticationAndAuthorization verifies that NewServer() enforces
-// authentication and authorization for all gRPC requests.
+// TestServerAuthenticationAndAuthorization verifies that the supplied interceptor
+// options enforce authentication and authorization for all job RPCs.
 func TestServerAuthenticationAndAuthorization(t *testing.T) {
 	ca := testutil.NewCertificate(t, nil, 0)
 	serverPair := testutil.NewCertificate(t, &ca, x509.ExtKeyUsageServerAuth)
 	roots := x509.NewCertPool()
 	roots.AddCert(ca.Leaf)
 	listener := bufconn.Listen(1024 * 1024)
-	server := NewServer("", job.NewRegistry(), grpc.Creds(credentials.NewTLS(&tls.Config{
-		Certificates: []tls.Certificate{serverPair},
-		ClientCAs:    roots,
-		ClientAuth:   tls.RequireAndVerifyClientCert,
-		MinVersion:   tls.VersionTLS13,
-	})))
+	server := NewServer("", job.NewRegistry(),
+		grpc.Creds(credentials.NewTLS(&tls.Config{
+			Certificates: []tls.Certificate{serverPair},
+			ClientCAs:    roots,
+			ClientAuth:   tls.RequireAndVerifyClientCert,
+			MinVersion:   tls.VersionTLS13,
+		})),
+		grpc.ChainUnaryInterceptor(UnaryAuthenticationInterceptor, UnaryAuthorizationInterceptor),
+		grpc.ChainStreamInterceptor(StreamAuthenticationInterceptor, StreamAuthorizationInterceptor),
+	)
 	go server.grpcServer.Serve(listener)
 	t.Cleanup(func() {
 		server.grpcServer.Stop()
@@ -88,35 +92,54 @@ func TestServerAuthenticationAndAuthorization(t *testing.T) {
 	}
 }
 
-// TestServerRejectsUnauthenticatedTransport verifies that
-// interceptors reject clients if they don't have a verified certificate.
-func TestServerRejectsUnauthenticatedTransport(t *testing.T) {
-	listener := bufconn.Listen(1024 * 1024)
-	server := NewServer("", job.NewRegistry())
-	go server.grpcServer.Serve(listener)
-	t.Cleanup(func() {
-		server.grpcServer.Stop()
-		listener.Close()
-	})
-	conn, err := grpc.NewClient("passthrough:///bufnet",
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
-			return listener.DialContext(ctx)
-		}),
-	)
-	// expect connection to the server to be successful as we
-	// do not have TLS configured.
-	require.NoError(t, err)
-	defer conn.Close()
-	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
-	defer cancel()
-	client := v1.NewJobServiceClient(conn)
-	_, err = client.GetJobStatus(ctx, &v1.GetJobStatusRequest{JobId: "missing"})
-	// expect `codes.Unauthenticated` because server interceptors
-	// fail to locate a verified client certificate.
-	require.Equal(t, codes.Unauthenticated, status.Code(err))
-	stream, err := client.StreamOutput(ctx, &v1.StreamOutputRequest{JobId: "missing"})
-	require.NoError(t, err)
-	_, err = stream.Recv()
-	require.Equal(t, codes.Unauthenticated, status.Code(err))
+// TestServerWithoutTLS verifies that plaintext requests reach the service unless
+// the caller supplies interceptors requiring a verified client certificate.
+func TestServerWithoutTLS(t *testing.T) {
+	testCases := []struct {
+		name     string
+		opts     []grpc.ServerOption
+		wantCode codes.Code
+	}{
+		{
+			name: "no_security_options",
+			// NotFound means the request reached the job service.
+			wantCode: codes.NotFound,
+		},
+		{
+			name: "interceptors_without_tls",
+			opts: []grpc.ServerOption{
+				grpc.ChainUnaryInterceptor(UnaryAuthenticationInterceptor, UnaryAuthorizationInterceptor),
+				grpc.ChainStreamInterceptor(StreamAuthenticationInterceptor, StreamAuthorizationInterceptor),
+			},
+			wantCode: codes.Unauthenticated,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			listener := bufconn.Listen(1024 * 1024)
+			server := NewServer("", job.NewRegistry(), tc.opts...)
+			go server.grpcServer.Serve(listener)
+			t.Cleanup(func() {
+				server.grpcServer.Stop()
+				listener.Close()
+			})
+			conn, err := grpc.NewClient("passthrough:///bufnet",
+				grpc.WithTransportCredentials(insecure.NewCredentials()),
+				grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
+					return listener.DialContext(ctx)
+				}),
+			)
+			require.NoError(t, err)
+			defer conn.Close()
+			ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+			defer cancel()
+			client := v1.NewJobServiceClient(conn)
+			_, err = client.GetJobStatus(ctx, &v1.GetJobStatusRequest{JobId: "missing"})
+			require.Equal(t, tc.wantCode, status.Code(err))
+			stream, err := client.StreamOutput(ctx, &v1.StreamOutputRequest{JobId: "missing"})
+			require.NoError(t, err)
+			_, err = stream.Recv()
+			require.Equal(t, tc.wantCode, status.Code(err))
+		})
+	}
 }

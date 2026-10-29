@@ -15,13 +15,9 @@ type Server struct {
 	grpcServer *grpc.Server
 }
 
-// NewServer installs authentication and role authorization for every RPC.
-// Callers must supply transport credentials that verify client certificates.
+// NewServer registers the job service with the supplied gRPC options.
+// Callers are responsible for configuring transport security and interceptors.
 func NewServer(address string, registry *job.Registry, opts ...grpc.ServerOption) *Server {
-	opts = append([]grpc.ServerOption{
-		grpc.ChainUnaryInterceptor(UnaryAuthenticationInterceptor, UnaryAuthorizationInterceptor),
-		grpc.ChainStreamInterceptor(StreamAuthenticationInterceptor, StreamAuthorizationInterceptor),
-	}, opts...)
 	grpcServer := grpc.NewServer(opts...)
 	v1.RegisterJobServiceServer(grpcServer, NewGRPCServer(registry))
 	return &Server{address: address, grpcServer: grpcServer}

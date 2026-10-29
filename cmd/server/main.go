@@ -27,7 +27,11 @@ func main() {
 	}
 
 	registry := job.NewRegistry()
-	srv := server.NewServer(*address, registry, grpc.Creds(credentials.NewTLS(tlsConfig)))
+	srv := server.NewServer(*address, registry,
+		grpc.Creds(credentials.NewTLS(tlsConfig)),
+		grpc.ChainUnaryInterceptor(server.UnaryAuthenticationInterceptor, server.UnaryAuthorizationInterceptor),
+		grpc.ChainStreamInterceptor(server.StreamAuthenticationInterceptor, server.StreamAuthorizationInterceptor),
+	)
 
 	// TODO: Handle termination signals and gracefully shut down the server and job registry.
 	log.Printf("Starting gRPC server on %s", *address)
